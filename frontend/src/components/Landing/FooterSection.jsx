@@ -2,7 +2,7 @@ import { FaInstagram } from "react-icons/fa6";
 import { FaXTwitter } from "react-icons/fa6";
 import { FaFacebookF } from "react-icons/fa";
 
-import logo2 from "../../assets/logo 2.png";
+import logo2 from "../../assets/logo2.png";
 
 export default function FooterSection() {
   return (

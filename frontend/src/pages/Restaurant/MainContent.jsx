@@ -7,10 +7,9 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogClose,
+  DialogDescription,
 } from "../../components/ui/dialog.jsx";
 import NewDonationForm from "./NewDonationForm";
 
@@ -25,28 +24,33 @@ export default function MainContent() {
         </button>
       </header>
 
-      <div className="flex justify-between items-center px-12 py-6">
+      <div className="flex  justify-between items-center px-12 py-6  ">
         <div>
           <p className="text-[#6b7280]">Welcome back,</p>
           <h1 className=" text-xl lg:text-2xl text-[#020817] font-bold">
             The Brewery
           </h1>
         </div>
-        <button
-          className="bg-[#F07167] hover:bg-[#d26159]  text-white px-4 py-2 rounded-md transition-colors flex items-center text-md "
-          onClick={() => setIsDialogOpen(true)}
-        >
-          <IoAdd size={20} className="mr-2" />
-          New Donation
-        </button>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Donation</DialogTitle>
-            </DialogHeader>
-            <NewDonationForm onSuccess={() => setIsDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <div>
+          <button
+            className="bg-[#F07167] hover:bg-[#d26159]  text-white px-2 py-1 lg:px-4 lg:py-2 rounded-md transition-colors flex items-center text-md  "
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <IoAdd size={20} className="mr-2" />
+            New Donation
+          </button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Donation</DialogTitle>
+              </DialogHeader>
+              <DialogDescription>
+                Fill in the details below to add your donation.
+              </DialogDescription>
+              <NewDonationForm onSuccess={() => setIsDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="px-12 py-4">

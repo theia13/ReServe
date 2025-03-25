@@ -57,9 +57,7 @@ export default function Donations() {
           <Link
             to={viewAllLink}
             className={`flex items-center gap-1 hover:px-4 transition-all ease-in-out duration-100 text-sm font-medium py-1 px-3 rounded-full ${
-              active
-                ? "bg-[#F07167] text-white" // Red for Active Donations
-                : "bg-gray-200 text-gray-700" // Grey for Past Donations
+              active ? "bg-[#F07167] text-white" : "bg-gray-200 text-gray-700"
             }`}
           >
             View All <FaArrowRightLong size={14} className="ml-1" />

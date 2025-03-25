@@ -7,7 +7,7 @@ export default function StatCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-lg p-5 shadow-sm transition-all card-hover animate-fade-in ${className} `}
+      className={`bg-white rounded-lg p-5 shadow-sm transition-all hover:shadow-md hover:shadow-gray-200 animate-fade-in ${className} `}
     >
       <div
         className={`flex md:flex-col lg:flex-row lg:items-center gap-2 mb-3 ${iconClassName}`}

@@ -7,7 +7,7 @@ import { IoLogOutOutline } from "react-icons/io5";
 
 import { useContext, useState } from "react";
 import { CgMenu, CgClose } from "react-icons/cg";
-import logo from "../../assets/logo.png";
+import logo3 from "../../assets/logo3.png";
 
 import { AuthContext } from "../../context/AuthContext";
 
@@ -90,12 +90,9 @@ export default function Sidebar() {
       >
         {/* Logo Section */}
         <div className="flex items-center justify-between ">
-          <Link to="" className="px-6 pt-4 pb-6">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="logo" className="w-16" />
-              <h1 className="text-[1.8rem] font-ysabeau font-bold text-[#F07167] pb-2">
-                Re<span className="text-black">Serve</span>
-              </h1>
+          <Link to="" className="px-6 pt-3 pb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <img src={logo3} alt="logo" className="w-[180px]" />
             </div>
           </Link>
           <div className="px-8 pb-2 md:hidden">
