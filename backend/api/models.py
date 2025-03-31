@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 from django.utils.timezone import now, timedelta
+import datetime
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None,**extra_fields):
@@ -95,7 +96,8 @@ class Donation(models.Model):
     status = models.CharField(choices=STATUS_CHOICEs, max_length=150, default="Claim")
     restaurant = models.ForeignKey("CustomUser", on_delete=models.CASCADE, related_name="donations")
     created_at = models.DateTimeField(auto_now_add=True)
-    expiration_datetime = models.DateTimeField()
+    expiration_date = models.DateField(default=datetime.date.today)
+    expiration_time = models.TimeField(default=datetime.time(12,0))
 
     objects = DonationManager()
 

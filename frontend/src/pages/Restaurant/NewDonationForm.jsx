@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "../../components/ui/button";
@@ -9,7 +9,9 @@ import TimePicker from "../../components/ui/timepicker";
 import { CiCalendar } from "react-icons/ci";
 import { Calendar } from "../../components/ui/calendar";
 
-import { useToast } from "../../hooks/use-toast"; // Ensure correct import
+import { useToast } from "../../hooks/use-toast";
+
+import { AuthContext } from "../../context/AuthContext";
 
 import { format } from "date-fns";
 import {
@@ -35,6 +37,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
+import { ACCESS_TOKEN } from "../../constants";
 
 const formSchema = z.object({
   title: z
@@ -64,8 +67,12 @@ const formSchema = z.object({
 });
 
 export default function NewDonationForm({ onSuccess }) {
+  const { token, user } = useContext(AuthContext);
+
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const [loading, setLoading] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -80,16 +87,71 @@ export default function NewDonationForm({ onSuccess }) {
   });
 
   const onSubmit = async (data) => {
-    console.log("Form submitted:", data);
+    setLoading(true);
+    console.log("Submitting data:", data);
 
-    setTimeout(() => {
-      toast({
-        title: "Donation added!",
-        description: "Your donation has been successfully added.",
+    const convertTo24HourFormat = (time12h) => {
+      const [time, modifier] = time12h.split(" ");
+      let [hours, minutes] = time.split(":");
+
+      if (modifier === "PM" && hours !== "12") {
+        hours = String(parseInt(hours, 10) + 12);
+      }
+      if (modifier === "AM" && hours === "12") {
+        hours = "00";
+      }
+
+      return `${hours}:${minutes}`;
+    };
+
+    const formattedData = {
+      ...data,
+      food_item: data.title,
+      quantity: Number(data.quantity),
+      expiration_date: data.expirationDate.toISOString().split("T")[0],
+      expiration_time: convertTo24HourFormat(data.expirationTime),
+      units: data.measurementUnit,
+    };
+
+    console.log("Formatted data:", formattedData);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/donations/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN)}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formattedData),
       });
-    }, 2000);
-    form.reset();
-    onSuccess();
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server error response:", errorData);
+        throw new Error(errorData.detail || "Failed to add donation");
+      }
+
+      setTimeout(() => {
+        toast({
+          title: "Donation added!",
+          description: "Your donation has been successfully added.",
+        });
+      }, 2000);
+
+      const responseDate = await response.json();
+      console.log("Donation created : ", responseDate);
+
+      form.reset();
+      onSuccess();
+    } catch (error) {
+      console.error("Error creating donation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add donation. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 
+
 class CustomUserSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True)
@@ -79,5 +80,8 @@ class DonationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Donation
         fields = '__all__'
+        extra_kwargs = {
+            "restaurant": {"read_only":True}
+        }
 
 

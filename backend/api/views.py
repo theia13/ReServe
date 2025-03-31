@@ -9,6 +9,7 @@ from .permissions import IsNGO, IsRestaurant
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from .models import Donation
 from django.db import IntegrityError
+from rest_framework import viewsets
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = CustomUserSerializer
@@ -84,21 +85,13 @@ class RestaurantView(APIView):
     
 
 class DonationListCreateView(generics.ListCreateAPIView):
+    serializer_class = DonationSerializer
     permission_classes = [IsAuthenticated]
-
-    def get(self,request):
-        donations = Donation.objects.all()
-        serializer = DonationSerializer(donations, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        if request.user.user_type != "restaurant":
-            return Response({"Error": "Only restaurants can add donations!"}, status=status.HTTP_403_FORBIDDEN)
-        serializer = DonationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(restaurant=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    queryset = Donation.objects.all()
+    def perform_create(self, serializer):
+        if self.request.user.user_type != "restaurant":
+            raise serializers.ValidationError({"error": "Only restaurants can add donations!"})
+        serializer.save(restaurant=self.request.user)
 
     
 class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
