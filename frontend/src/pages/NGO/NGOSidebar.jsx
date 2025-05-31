@@ -7,7 +7,7 @@ import { IoLogOutOutline } from "react-icons/io5";
 
 import { useContext, useState } from "react";
 import { CgMenu, CgClose } from "react-icons/cg";
-import logo from "../../assets/logo.png";
+import logo3 from "../../assets/logo3.png";
 import { AuthContext } from "../../context/AuthContext";
 
 export default function NGOSidebar() {
@@ -22,29 +22,29 @@ export default function NGOSidebar() {
   const menuItems = [
     {
       title: "Dashboard",
-      path: "/restaurant-dashboard",
+      path: "/ngo-dashboard",
       icon: <LuLayoutDashboard size={24} />,
     },
     {
       title: "History",
-      path: "/history",
+      path: "/ngo-dashboard/history",
       icon: <PiClockCounterClockwise size={25} />,
     },
     {
       title: "Settings",
-      path: "/settings",
+      path: "/ngo-dashboard/settings",
       icon: <IoSettingsOutline size={24} />,
     },
   ];
 
   const NavigationLinks = () => (
     <>
-      <nav className="flex-1 px-6">
+      <nav className="flex-1 px-6 animate-slide-right">
         <ul className="space-y-3">
           {menuItems.map((item) => (
             <li key={item.title}>
               <Link
-                to=""
+                to={item.path}
                 onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-md tmdransition ${
                   location.pathname === item.path
@@ -65,7 +65,7 @@ export default function NGOSidebar() {
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300   ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setIsOpen(false)}
@@ -88,13 +88,10 @@ export default function NGOSidebar() {
   ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo Section */}
-        <div className="flex items-center justify-between ">
-          <Link to="" className="px-6 pt-4 pb-6">
+        <div className="flex items-center justify-between animate-slide-right">
+          <Link to="/ngo-dashboard" className="px-6 pt-4 pb-6">
             <div className="flex items-center gap-2">
-              <img src={logo} alt="logo" className="w-16" />
-              <h1 className="text-[1.8rem] font-ysabeau font-bold text-[#F07167] pb-2">
-                Re<span className="text-black">Serve</span>
-              </h1>
+              <img src={logo3} alt="logo" className="w-[180px]" />
             </div>
           </Link>
           <div className="px-8 pb-2 md:hidden">
@@ -106,7 +103,7 @@ export default function NGOSidebar() {
 
         <NavigationLinks />
 
-        <div className="mt-auto border-t border-gray-200 p-4">
+        <div className="mt-auto border-t border-gray-200 p-4 animate-slide-right">
           <button
             onClick={logout}
             className="flex items-center gap-3 px-4 py-2.5 text-md text-[#6b7280]

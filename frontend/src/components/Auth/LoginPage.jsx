@@ -5,19 +5,41 @@ import { AuthContext } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
-  const [formData, setformData] = useState({
-    email: "email",
-    password: "password",
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
   });
+
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    if (error) setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(formData.email, formData.password);
+    setIsLoading(true);
+    setError("");
+
+    const result = await login(formData.email, formData.password);
+
+    setIsLoading(false);
+    if (!result.success) {
+      setError(result.error);
+    }
   };
 
   return (
     <>
-      <div className="flex w-full h-screen ">
+      <div className="flex min-h-screen ">
         <div className="right lg:flex-1">
           <img
             src={image1}
@@ -37,19 +59,15 @@ export default function LoginPage() {
               </Link>
             </span>
           </p>
+          {error && <div className=" text-[#F07167] rounded mt-8">{error}</div>}
           <div className="mt-12">
-            <form
-              action=""
-              className="flex flex-col gap-4"
-              onSubmit={handleSubmit}
-            >
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <input
                 type="email"
                 placeholder="Email"
+                name="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setformData({ ...formData, email: e.target.value })
-                }
+                onChange={handleChange}
                 className="border-2 border-gray-300 rounded-sm px-4 py-2 w-96"
                 required
               />
@@ -57,19 +75,21 @@ export default function LoginPage() {
               <input
                 type="password"
                 placeholder="Password"
+                name="password"
                 value={formData.password}
-                onChange={(e) =>
-                  setformData({ ...formData, password: e.target.value })
-                }
+                onChange={handleChange}
                 className="border-2 border-gray-300 rounded-sm px-4 py-2"
                 required
               />
               <button
                 type="submit"
+                disabled={isLoading}
                 className="px-6 py-3 bg-black text-white transition-all duration-300 relative group overflow-hidden"
               >
                 <span className="absolute inset-0 bg-[#1F1F1F] translate-x-[-100%] transition-transform duration-300 ease-in-out group-hover:translate-x-0"></span>
-                <span className="relative z-10">Sign In</span>
+                <span className="relative z-10">
+                  {isLoading ? "Logging in..." : "Sign in"}
+                </span>
               </button>
             </form>
           </div>

@@ -2,25 +2,42 @@ import { Navigate, Outlet } from "react-router-dom";
 import { ACCESS_TOKEN } from "../constants";
 import { useState, useEffect } from "react";
 
-export default function ProtectedRoute() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem(ACCESS_TOKEN)
-  );
+export default function ProtectedRoute({ allowedRole }) {
+  // const [isAuthenticated, setIsAuthenticated] = useState(
+  //   !!localStorage.getItem(ACCESS_TOKEN)
+  // );
+
+  const [isAllowed, setIsAllowed] = useState(null);
+
+  // useEffect(() => {
+  //   const checkAuth = () => {
+  //     console.log("Checking authentication status...");
+  //     setIsAuthenticated(!!localStorage.getItem(ACCESS_TOKEN));
+  //   };
 
   useEffect(() => {
-    const checkAuth = () => {
-      console.log("Checking authentication status...");
-      setIsAuthenticated(!!localStorage.getItem(ACCESS_TOKEN));
-    };
+    const token = sessionStorage.getItem(ACCESS_TOKEN);
+    const role = sessionStorage.getItem("role");
 
-    window.addEventListener("storage", checkAuth);
+    const isAuthenticated = !!token;
+    const isAuthorized = isAuthenticated && role === allowedRole;
 
-    const token = localStorage.getItem(ACCESS_TOKEN);
-    console.log("Protected Route Check: Token found?", !!token);
+    setIsAllowed(isAuthorized);
+  }, [allowedRole]);
 
-    return () => window.removeEventListener("storage", checkAuth);
-  }, []);
-  if (isAuthenticated === null) return null;
+  if (isAllowed === null) return null;
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/auth/login" replace />;
+  return isAllowed ? <Outlet /> : <Navigate to="/auth/login" replace />;
 }
+
+// window.addEventListener("storage", checkAuth);
+
+// const token = localStorage.getItem(ACCESS_TOKEN);
+// console.log("Protected Route Check: Token found?", !!token);
+
+//     return () => window.removeEventListener("storage", checkAuth);
+//   }, []);
+//   if (isAuthenticated === null) return null;
+
+//   return isAuthenticated ? <Outlet /> : <Navigate to="/auth/login" replace />;
+// }

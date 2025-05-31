@@ -5,7 +5,7 @@ import NGOStatCard from "./NGOStatCard";
 
 export default function Stats() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up ">
       <NGOStatCard
         icon={<LuHeart className="text-[#F07167]" size={28} />}
         title="Donations claimed"

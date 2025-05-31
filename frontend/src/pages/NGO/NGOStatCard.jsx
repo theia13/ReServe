@@ -13,9 +13,11 @@ export default function NGOStatCard({
         className={`flex md:flex-col lg:flex-row lg:items-center gap-2 mb-3 ${iconClassName}`}
       >
         {icon}
-        <span className="text-[#6b7280] text-md">{title}</span>
+        <span className="text-[#6b7280] text-sm lg:text-md">{title}</span>
       </div>
-      <p className="text-[1.8rem] text-[#020817] font-semibold">{value}</p>
+      <p className=" text-2xl lg:text-[1.8rem] text-[#020817] font-semibold">
+        {value}
+      </p>
     </div>
   );
 }

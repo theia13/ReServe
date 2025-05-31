@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import RegisterView, LoginView, ProtectedView, LogoutView, DonationListCreateView, DonationDetailView, ClaimDonationView, get_user
+from . import views
 
 
 urlpatterns = [
@@ -8,7 +9,10 @@ urlpatterns = [
     path('protected/', ProtectedView.as_view(), name='protected-api'),
     path('logout/', LogoutView.as_view(), name="logout"),
     path('donations/', DonationListCreateView.as_view(), name='donation-list-create'),
+    path('donations/<int:pk>/claim/', ClaimDonationView.as_view(), name='claim-donation'),
     path('donations/<int:pk>/', DonationDetailView.as_view(), name='donation-detail'),
-    path('donations/<int:pk>/claim/', ClaimDonationView.as_view(), name="donation-claim"),
-     path("user/", get_user, name="get-user"),
+    path('user/', get_user, name="get-user"),
+    path('user/user-profile/', views.user_profile_view, name="user profile"),
+    path('user/change-password', views.change_password_view, name="change password")
+
 ]

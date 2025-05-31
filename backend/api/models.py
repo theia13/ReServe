@@ -3,13 +3,16 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager, Permission
 from django.utils.timezone import now, timedelta
 import datetime
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None,**extra_fields):
         if not email:
             raise ValueError("Email is required!")
         
         if extra_fields.get("user_type") != "admin":
-            required_fields = ["organization_name", "contact_person", "street_address", "area", "city", "pin_code" ]
+            required_fields = ["organization_name", "contact_person",  ]
             for field in required_fields:
                 if field not in extra_fields or not extra_fields[field]:
                     raise ValueError(f"{field.replace('_', ' ').capitalize()} is required")
@@ -43,11 +46,7 @@ class CustomUser(AbstractUser, PermissionsMixin):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='admin')
     organization_name = models.TextField(max_length=255, null=False, blank=False)
     contact_person = models.CharField(max_length=255,null=False, blank=False)
-    street_address = models.CharField(max_length=255, null=False, blank=False)
-    area = models.CharField(max_length=200,null=False, blank=False )
-    landmark = models.CharField(max_length=255, )
-    city = models.CharField(max_length=100,null=False, blank=False)
-    pin_code= models.CharField(max_length=10, null=False, blank=False)
+    address = models.OneToOneField('UserAddress', on_delete=models.CASCADE, null=True, blank=True, related_name='user_profile_address')
 
     first_name = models.CharField(max_length=150, null=True, blank=True)
     last_name = models.CharField(max_length=150, null=True, blank=True)
@@ -61,6 +60,18 @@ class CustomUser(AbstractUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.organization_name} ({self.get_user_type_display()})"
+    
+
+class UserAddress(models.Model):
+    user = models.OneToOneField("CustomUser", on_delete=models.CASCADE, related_name="user_address",null=True, blank=True)
+    street_address = models.CharField(max_length=255)
+    area = models.CharField(max_length=255, null=False, blank=True)
+    landmark = models.CharField(max_length=255, null=False, blank=True)
+    city = models.CharField(max_length=255, null=False, blank=True)
+    pin_code = models.CharField(max_length=255, null=False, blank=True)
+
+    def __str__(self):
+        return f"{self.street_address} , {self.area} {self.city}"
 
 
 class DonationManager(models.Manager):
@@ -78,7 +89,7 @@ class DonationManager(models.Manager):
 
 class Donation(models.Model):
     STATUS_CHOICEs = [
-       ( "claim", "claim"), 
+       ( "claim", "Claim"), 
        ( "claimed", "Claimed") 
     ]
 
@@ -88,12 +99,13 @@ class Donation(models.Model):
         ("servings", "servings"), 
         ("pieces", "pieces"), 
     ]
-
+    claimed_by = models.ForeignKey("CustomUser", null=True, blank=True, on_delete=models.SET_NULL, related_name='claimed_donations') 
+    claimed_at = models.DateTimeField(null=True, blank=True)
     food_item = models.CharField(max_length=150)
     quantity = models.PositiveBigIntegerField()
     units = models.CharField(choices=UNIT_CHOICES, max_length=150, default="Servings")
     description = models.TextField(max_length=255, blank=True, null=True)
-    status = models.CharField(choices=STATUS_CHOICEs, max_length=150, default="Claim")
+    status = models.CharField(choices=STATUS_CHOICEs, max_length=150, default="claim")
     restaurant = models.ForeignKey("CustomUser", on_delete=models.CASCADE, related_name="donations")
     created_at = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateField(default=datetime.date.today)
@@ -103,3 +115,17 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.food_item} ({self.quantity} meals) - {self.status}"
+    
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    email_notification = models.BooleanField(default=True)
+    expiration_alerts = models.BooleanField(default=True)
+    weekly_reports = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.user.organization_name} Profile"
+
+@receiver(post_save, sender=CustomUser)
+def create_or_update_user_profile(sender,instance,created, **kwargs):
+    UserProfile.objects.get_or_create(user=instance)

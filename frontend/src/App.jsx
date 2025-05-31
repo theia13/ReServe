@@ -20,10 +20,12 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/register" element={<Register />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/ngo-dashboard" element={<NGODashboard />} />
+          <Route element={<ProtectedRoute allowedRole="ngo" />}>
+            <Route path="/ngo-dashboard/*" element={<NGODashboard />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRole="restaurant" />}>
             <Route
-              path="/restaurant-dashboard"
+              path="/restaurant-dashboard/*"
               element={<RestaurantDashboard />}
             />
           </Route>

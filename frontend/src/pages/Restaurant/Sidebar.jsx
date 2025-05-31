@@ -28,12 +28,12 @@ export default function Sidebar() {
     },
     {
       title: "History",
-      path: "/history",
+      path: "/restaurant-dashboard/history",
       icon: <PiClockCounterClockwise size={25} />,
     },
     {
       title: "Settings",
-      path: "/settings",
+      path: "/restaurant-dashboard/settings",
       icon: <IoSettingsOutline size={24} />,
     },
   ];
@@ -45,7 +45,7 @@ export default function Sidebar() {
           {menuItems.map((item) => (
             <li key={item.title}>
               <Link
-                to=""
+                to={item.path}
                 onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-md tmdransition ${
                   location.pathname === item.path
@@ -90,7 +90,7 @@ export default function Sidebar() {
       >
         {/* Logo Section */}
         <div className="flex items-center justify-between ">
-          <Link to="" className="px-6 pt-3 pb-6">
+          <Link to="/" className="px-6 pt-3 pb-6">
             <div className="flex items-center gap-2 mb-2">
               <img src={logo3} alt="logo" className="w-[180px]" />
             </div>
