@@ -8,9 +8,13 @@ import Register from "./components/Auth/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NGODashboard from "./pages/NGO/NGODashboard";
 import RestaurantDashboard from "./pages/Restaurant/RestaurantDashboard";
+import MainContent from "./pages/Restaurant/MainContent";
+import RestaurantHistory from "./pages/Restaurant/RestaurantHistory";
+import RestaurantSettings from "./pages/Restaurant/RestaurantSettings";
 
 import { Toaster } from "./components/ui/toaster";
 import { ToastProvider } from "./components/ui/toast";
+
 function App() {
   return (
     <>
@@ -20,14 +24,20 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/register" element={<Register />} />
+
           <Route element={<ProtectedRoute allowedRole="ngo" />}>
             <Route path="/ngo-dashboard/*" element={<NGODashboard />} />
           </Route>
+
           <Route element={<ProtectedRoute allowedRole="restaurant" />}>
             <Route
               path="/restaurant-dashboard/*"
               element={<RestaurantDashboard />}
-            />
+            >
+              <Route index element={<MainContent />} />
+              <Route path="history" element={<RestaurantHistory />} />
+              <Route path="settings" element={<RestaurantSettings />} />
+            </Route>
           </Route>
         </Routes>
       </ToastProvider>

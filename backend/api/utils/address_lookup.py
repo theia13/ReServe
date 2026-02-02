@@ -9,7 +9,6 @@ def get_location_by_area(area_name):
     with open(CSV_path, encoding='utf-8', errors='replace') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            print(row)
             if row['Area'].strip().lower() == area_name.strip().lower():
                 return {
                     'city': row['City'],

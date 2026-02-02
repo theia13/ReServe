@@ -15,7 +15,6 @@ class AddressSerializer(serializers.ModelSerializer):
 
 class CustomUserSerializer(serializers.ModelSerializer):
     address = AddressSerializer()
-    password = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomUser
@@ -74,19 +73,11 @@ class LoginSerializer(serializers.Serializer):
         password = data.get('password')
         user = authenticate(email=email, password=password)
     
-        if user is None:
+        if not user:
             raise serializers.ValidationError("Invalid email or password")
-        
-        refresh = RefreshToken.for_user(user)
 
         return {
-            "user" : {
-                "id": user.id,
-                "email": user.email,
-                "user_type": user.user_type,
-            },
-            "refresh": str(refresh),
-            "access" : str(refresh.access_token)
+            "user" : user
         }
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -131,6 +122,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class DonationSerializer(serializers.ModelSerializer):
     restaurantName = serializers.CharField(source='restaurant.organization_name', read_only=True)
     claimedAt = serializers.DateTimeField(source='claimed_at', read_only=True)
+    claimedBy = serializers.CharField(source='claimed_by.username', read_only=True)
+
     class Meta:
         model = Donation
         fields = '__all__'

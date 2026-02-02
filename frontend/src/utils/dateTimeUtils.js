@@ -145,4 +145,87 @@ const isExpired = (expirationDate, expirationTime) => {
   return expiration <= now;
 };
 
-export { convertTo24HourFormat, formatDateTime, timeLeft, timePast, isExpired };
+/**
+ * Calculates how much time has passed since expiration date/time.
+ * expirationDate: "YYYY-MM-DD"
+ * expirationTime: "HH:mm:ss" or "HH:mm"
+ * Returns strings like "2 days ago", "3 hours ago", "Just now", or "Invalid Date"
+ */
+const timeExpired = (expirationDate, expirationTime) => {
+  if (!expirationDate || !expirationTime) return "Invalid Date";
+
+  const time24h = convertTo24HourFormat(expirationTime);
+  const expiration = DateTime.fromISO(`${expirationDate}T${time24h}`, {
+    zone: "Asia/Kolkata",
+  });
+
+  if (!expiration.isValid) return "Invalid Date";
+
+  const now = DateTime.now().setZone("Asia/Kolkata");
+
+  if (expiration > now) return "Not expired yet";
+
+  const diff = now
+    .diff(expiration, ["years", "months", "days", "hours", "minutes"])
+    .toObject();
+
+  if (diff.years >= 1)
+    return diff.years.toFixed(0) === "1"
+      ? "1 year ago"
+      : `${Math.floor(diff.years)} years ago`;
+  if (diff.months >= 1)
+    return diff.months.toFixed(0) === "1"
+      ? "1 month ago"
+      : `${Math.floor(diff.months)} months ago`;
+  if (diff.days >= 1)
+    return diff.days.toFixed(0) === "1"
+      ? "1 day ago"
+      : `${Math.floor(diff.days)} days ago`;
+  if (diff.hours >= 1)
+    return diff.hours.toFixed(0) === "1"
+      ? "1 hour ago"
+      : `${Math.floor(diff.hours)} hours ago`;
+  if (diff.minutes >= 1)
+    return diff.minutes.toFixed(0) === "1"
+      ? "1 minute ago"
+      : `${Math.floor(diff.minutes)} minutes ago`;
+
+  return "Just now";
+};
+
+const convertTo12HourFormat = (time24h) => {
+  if (!time24h) return "";
+
+  const [hours, minutes] = time24h.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+// Helper function for date/time validation
+const isInPast = (date, time12h) => {
+  if (!date || !time12h) return false;
+
+  const now = new Date();
+  const expirationDate = new Date(date);
+
+  // Set the time component
+  const time24h = convertTo24HourFormat(time12h);
+  const [hours, minutes] = time24h.split(":");
+  expirationDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+  return expirationDate < now;
+};
+
+export {
+  convertTo24HourFormat,
+  convertTo12HourFormat,
+  formatDateTime,
+  timeLeft,
+  timePast,
+  isExpired,
+  timeExpired,
+  isInPast,
+};

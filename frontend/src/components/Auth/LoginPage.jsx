@@ -1,7 +1,7 @@
-import image1 from "../../assets/image1.jpg";
-import { Link } from "react-router-dom";
 import { useContext, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
+import image1 from "../../assets/image1.jpg";
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -9,7 +9,6 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
-
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -53,13 +52,20 @@ export default function LoginPage() {
             Don't have an account?
             <span className="text-[#F07167] relative cursor-pointer group">
               {" "}
-              <Link to="/auth/register">
+              <Link
+                to="/auth/register"
+                className="group-hover:w-full group-hover:left-0"
+              >
                 Register here.
-                <span className="absolute left-1/2 bottom-0 w-0 h-[0.5px] bg-[#F07167] transition-all duration-300 group-hover:w-full group-hover:left-0"></span>
+                <span className="absolute left-1/2 bottom-0 w-0 h-[0.5px] bg-[#F07167] transition-all duration-300 "></span>
               </Link>
             </span>
           </p>
-          {error && <div className=" text-[#F07167] rounded mt-8">{error}</div>}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mt-6">
+              {error}
+            </div>
+          )}
           <div className="mt-12">
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <input
@@ -68,6 +74,7 @@ export default function LoginPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                disabled={isLoading}
                 className="border-2 border-gray-300 rounded-sm px-4 py-2 w-96"
                 required
               />
@@ -78,6 +85,7 @@ export default function LoginPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isLoading}
                 className="border-2 border-gray-300 rounded-sm px-4 py-2"
                 required
               />

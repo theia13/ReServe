@@ -1,205 +1,163 @@
-import { createContext, useCallback, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ACCESS_TOKEN, REFRESH_TOKEN } from "../constants";
+import { useLogin } from "../hooks/useLogin";
+import { useRegister } from "../hooks/useRegister";
+import { useLogout } from "../hooks/useLogout";
+import api from "../lib/axios";
 
 export const AuthContext = createContext();
 
+// In AuthContext.jsx
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
 
-  // refresh token
+  useEffect(() => {
+    api
+      .get("/check-auth/")
+      .then((res) => {
+        setUser(res.data);
+      })
+      .catch((error) => {
+        console.log("Auth check failed:", error);
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
-  const refreshAccessToken = async () => {
-    const refresh = localStorage.getItem(REFRESH_TOKEN);
-    if (!refresh) throw new Error("No refresh token available!");
+  //Login
+  const { mutateAsync: loginMutation } = useLogin({
+    onSuccess: (data) => {
+      if (data.user) setUser(data.user);
+    },
+  });
 
-    const response = await fetch(
-      "https://127.0.0.0.1:8000/api/token/refresh/",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh }),
-      }
-    );
-
-    const data = await response.json();
-
-    if ((!response.ok || !data, access)) {
-      logout();
-      throw new Error("Session expired. Please log in again.");
-    }
-
-    localStorage.setItem(ACCESS_TOKEN, data.access);
-    setUser((prev) => (prev ? { ...prev, token: data.access } : null));
-    return data.access;
-  };
-
-  const authFetch = async (URL, options = {}) => {
-    let accessToken = localStorage.getItem(ACCESS_TOKEN);
-
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    const config = {
-      ...options,
-      headers,
-    };
-
-    let response = await fetch(URL, config);
-
-    if (response.status === 401) {
-      try {
-        accessToken = await refreshAccessToken();
-        config.headers.Authorization = `Bearer ${accessToken}`;
-        response = await fetch(URL, config);
-      } catch (error) {
-        console.error("Token refresh failed:", error);
-        throw error;
-      }
-    }
-
-    return response;
-  };
-
-  // Login
   const login = async (email, password) => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/login/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.non_field_errors) {
-          throw new Error(data.non_field_errors[0]);
-        } else if (data.email) {
-          throw new Error(data.email[0]);
-        } else if (data.password) {
-          throw new Error(data.password[0]);
-        } else {
-          throw new Error("Login failed. Please try again.");
-        }
+      const data = await loginMutation({ email, password });
+      if (!data.user || !data.user.user_type) {
+        console.log("Invalid login response structure");
+        return { success: false, error: "Invalid login response" };
       }
 
-      if (!data.user || !data.user.user_type || !data.access) {
-        throw new Error("User type not found in response!");
+      try {
+        const userRes = await api.get("/check-auth/");
+        setUser(userRes.data);
+      } catch (userError) {
+        console.error("Failed to fetch user after login:", userError);
+        setUser(data.user);
       }
-
-      sessionStorage.setItem(ACCESS_TOKEN, data.access);
-      sessionStorage.setItem(REFRESH_TOKEN, data.refresh);
-      sessionStorage.setItem("role", data.user.user_type);
-
-      setUser({ token: data.access, user_type: data.user.user_type });
 
       const dashboardRoute =
         data.user.user_type === "ngo"
           ? "/ngo-dashboard"
           : "/restaurant-dashboard";
       navigate(dashboardRoute, { replace: true });
-
       return { success: true };
     } catch (error) {
       console.error("Login error:", error);
-
-      return { success: false, error: error.message };
+      const errMsg =
+        error?.response?.data?.non_field_errors?.[0] ||
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Login failed. Please try again.";
+      return { success: false, error: errMsg };
     }
   };
 
-  // Register
-  const register = async (userData) => {
+  const { mutateAsync: registerMutation } = useRegister({
+    onSuccess: (data) => {
+      console.log("Register onSuccess triggered:", data);
+      if (data.user) setUser(data.user);
+    },
+    onError: (error) => {
+      console.error("Register onError triggered:", error);
+    },
+  });
+
+  const register = async (FormData) => {
     try {
-      const formattedData = {
-        user_type: userData.user_type,
-        organization_name: userData.organization_name,
-        contact_person: userData.contact_person,
-        email: userData.email,
-        password: userData.password,
-        confirm_password: userData.confirm_password,
-        address: {
-          street_address: userData.address.street_address,
-          area: userData.address.area,
-          landmark: userData.address.landmark,
-          city: userData.address.city,
-          pin_code: userData.address.pin_code,
-        },
-      };
-
-      const response = await fetch("http://127.0.0.1:8000/api/register/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formattedData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const formattedErrors = {};
-        Object.keys(data).forEach((key) => {
-          const error = data[key];
-          formattedErrors[key] = Array.isArray(error) ? error : [error];
-        });
-        return { success: false, errors: data };
+      const data = await registerMutation(FormData);
+      if (!data.user || !data.user.user_type) {
+        console.log("❌ Invalid registration response structure:", data);
+        return {
+          success: false,
+          errors: { non_field_errors: ["Invalid registration response"] },
+        };
+      }
+      try {
+        const userRes = await api.get("/check-auth/");
+        setUser(userRes.data);
+      } catch (userError) {
+        console.error("⚠️ Check-auth failed, using register data:", userError);
+        setUser(data.user);
       }
 
-      localStorage.setItem(ACCESS_TOKEN, data.access);
-      localStorage.setItem(REFRESH_TOKEN, data.refresh);
-      setUser({ token: data.access, role: data.user_type });
-
-      navigate(
-        data.user_type === "ngo" ? "/ngo-dashboard" : "/restaurant-dashboard",
-        { replace: true }
-      );
-
+      const dashboardRoute =
+        data.user.user_type === "ngo"
+          ? "/ngo-dashboard"
+          : "/restaurant-dashboard";
+      navigate(dashboardRoute, { replace: true });
       return { success: true };
     } catch (error) {
-      console.error("Registration error:", error);
-
-      return {
-        success: false,
-        errors: {
-          non_field_errors: ["An unexpected error occured. Please try again."],
-        },
-      };
+      const errData = error?.response?.data || {};
+      const formattedErrors = {};
+      Object.keys(errData).forEach((key) => {
+        const val = errData[key];
+        formattedErrors[key] = Array.isArray(val) ? val : [val];
+      });
+      if (!Object.keys(formattedErrors).length) {
+        formattedErrors.non_field_errors = [
+          error?.message || "Registration failed. Please try again.",
+        ];
+      }
+      return { success: false, errors: formattedErrors };
     }
   };
 
   // Logout
-  const logout = useCallback(async () => {
-    try {
-      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN);
-      if (!refreshToken) throw new Error("No refresh token found");
 
-      await fetch("http://127.0.0.1:8000/api/logout/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem(ACCESS_TOKEN)}`,
-        },
-        body: JSON.stringify({
-          refresh: refreshToken,
-        }),
-      });
-
-      sessionStorage.removeItem(ACCESS_TOKEN);
-      sessionStorage.removeItem(REFRESH_TOKEN);
+  const { mutateAsync: logoutMutation } = useLogout({
+    onSuccess: () => {
       setUser(null);
-
       navigate("/auth/login");
+    },
+    onError: () => {
+      setUser(null);
+      navigate("/auth/login");
+    },
+  });
+
+  const logout = async () => {
+    try {
+      await logoutMutation();
+      setUser(null);
+      navigate("/auth/login");
+      return { success: true };
     } catch (error) {
-      console.error("Logout error: ", error);
+      setUser(null);
+      navigate("/auth/login");
+      const errData = error?.response?.data || {};
+      const formattedErrors = {};
+      Object.keys(errData).forEach((key) => {
+        const val = errData[key];
+        formattedErrors[key] = Array.isArray(val) ? val : [val];
+      });
+      if (!Object.keys(formattedErrors).length) {
+        formattedErrors.non_field_errors = [
+          error?.message || "Logout failed. Please try again.",
+        ];
+      }
+      return { success: false, errors: formattedErrors };
     }
-  }, [navigate]);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
+    <AuthContext.Provider value={{ user, login, logout, register, loading }}>
       {children}
     </AuthContext.Provider>
   );

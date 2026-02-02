@@ -7,20 +7,18 @@ from .serializers import CustomUserSerializer, LoginSerializer, DonationSerializ
 from .permissions import IsNGO, IsRestaurant
 from .models import Donation
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
-
+from django.conf import settings
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
-        print("Request received!")
-        print("Request body:", request.data)
-        
         serializer = self.get_serializer(data=request.data)
         
         if not serializer.is_valid():
@@ -29,18 +27,36 @@ class RegisterView(generics.CreateAPIView):
 
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
 
-        return Response(
+        response = Response(
             {
                 'user': CustomUserSerializer(user).data,
-                'id': user.id,
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
                 'user_type': user.user_type,
             },
             status=status.HTTP_201_CREATED
+        )
+
+        response.set_cookie(
+            key="access",
+            value=access_token,
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 20,
         )    
 
+        response.set_cookie(
+            key="refresh",
+            value=refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
+        ) 
+
+        return response
 
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
@@ -50,21 +66,56 @@ class LoginView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
 
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        response = Response({
+            "user": {
+                "email": user.email,
+                "user_type": user.user_type,
+            }
+        })
+
+        # Check if in development mode
+        is_development = settings.DEBUG  # or however you determine dev mode
+        
+        response.set_cookie(
+            key="access",
+            value=access_token,
+            httponly=True,
+            secure=True,           # force it to True
+            samesite="None",       # cross-site requires None + secure
+            max_age=60*20,
+        )
+
+
+        response.set_cookie(
+            key="refresh",
+            value=refresh_token,
+            httponly=True,
+            samesite="Lax" if is_development else "None",  # Changed
+            secure=not is_development,  # False for dev, True for prod
+            max_age=60*60*24*7,
+        )
+        return response
     
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
-            refresh_token = request.data.get("refresh")
-
+            refresh_token = request.COOKIES.get("refresh")
             if not refresh_token:
-                return Response({"Error":"Refresh token is requires"}, status=400)
+                return Response({"Error":"Refresh token is required."}, status=400)
             
             token_obj = RefreshToken(refresh_token)
             token_obj.blacklist()
-            return Response({"message":"Logged out succesfully"}, status=200)
+
+            response = Response({"message":"Logged out succesfully"}, status=200)
+            response.delete_cookie("access")
+            response.delete_cookie("refresh")
+            return response
         except Exception as e:
             return Response({"error":str(e)}, status=400)
 
@@ -90,7 +141,6 @@ class RestaurantView(APIView):
 class DonationListCreateView(generics.ListCreateAPIView):
     serializer_class = DonationSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Donation.objects.all()
     
     def perform_create(self, serializer):
         if self.request.user.user_type != "restaurant":
@@ -107,7 +157,7 @@ class DonationListCreateView(generics.ListCreateAPIView):
             try:
                 area = user.address.area
             except AttributeError:
-                raise serializers.ValidationError({
+                raise ValidationError({
                     "detail" : "NGO address or area is not set. Please update your profile."
                 })
             
@@ -124,59 +174,129 @@ class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DonationSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self,request,pk):
-        try:
-            donation = Donation.objects.get(pk=pk)
-            serializer = DonationSerializer(donation)
-            return Response(serializer.data)
-        except Donation.DoesNotExist:
-            return Response({"Error": "Donation not found"}, status=status.HTTP_404_NOT_FOUND)
+    def get_object(self):
+        obj = get_object_or_404(Donation, pk=self.kwargs['pk'])
 
-    def put(self,request,pk):
-        if request.user.user_type != "restaurant":
-            return Response({"Error": "Only restaurants can edit this!"}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            donation = Donation.objects.get(pk=pk)
-            serializer = DonationSerializer(donation, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Donation.DoesNotExist:
-            return Response({"Error": "Donation not found"}, status=status.HTTP_404_NOT_FOUND)
+        if self.request.method == 'GET':
+            if (obj.restaurant == self.request.user or obj.claimed_by == self.request.user):
+                return obj
+            else:
+                raise PermissionDenied("You don't have permission to view this donation.")
+            
+        elif self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            if self.request.user.user_type != 'restaurant':
+                raise PermissionDenied("Only restaurants can modify donations.")
+            
+            if obj.restaurant != self.request.user:
+                raise PermissionDenied("You can only modify your own donations.")
+            
+            if self.request.method in ['PUT', 'PATCH', 'DELETE'] and obj.status == 'claimed':
+                raise PermissionDenied("Cannot modify claimed donations.")
+            
+            return obj
         
-    def delete(self,request,pk):
-        if request.user.user_type != "restaurant":
-            return Response({"Error": "Only restaurants can delete this!"}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            donation = Donation.objects.get(pk=pk)
-            donation.delete()
-            return Response({"message": "Donation deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
-        except Donation.DoesNotExist:
-            return Response({"Error" : "Donation not found"}, status=status.HTTP_404_NOT_FOUND)
+        return obj
+    
+    def perform_update(self, serializer):
+        if 'restaurant' in serializer.validated_data:
+            raise ValidationError({'restaurant': "Restaurant field cannot be modified"})
+        if 'claimed_by' in serializer.validated_data:
+            raise ValidationError({'claimed_by': "Use the claim endpoint to claim donations."})
+        
+        serializer.save()
+
+    def perform_destroy(self,instance):
+        print(f"Donaton {instance.id} deleted by {self.request.user}")
+        instance.delete()
         
 class ClaimDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request,pk):
-        print("CLAIM VIEW HIT")
+        if request.user.user_type != "ngo":
+            return Response (
+                {"Error" : "Only NGOs can claim donations!"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         try:
             donation = Donation.objects.get(pk=pk, status="claim")
+
+            try:
+                ngo_area = request.user.address.area
+                restaurant_area = donation.restaurant.address.area
+
+                if ngo_area.lower() != restaurant_area.lower():
+                    return Response(
+                        {"Error": "You can only claim donations in your area!"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except AttributeError:
+                return Response(
+                    {"error": "address information is incomplete!"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             donation.status = "claimed"
             donation.claimed_by = request.user
             donation.claimed_at = timezone.now()
             donation.save()
-            return Response({"message":"Donation claimed successfully!"}, status=status.HTTP_200_OK)
+
+            return Response({"message" : "Donation claimed successfully!"},
+                            status=status.HTTP_200_OK)
+
         except Donation.DoesNotExist:
-            return Response({"Error":"Donation not found or already claimed"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"Error": "Donation not found or already claimed"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+class UnclaimDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request,pk):
+        if request.user.user_type != "ngo":
+            return Response(
+                {"Error" : "Only NGOs can unclaim donations!"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            donation = Donation.objects.get(
+                pk=pk,
+                status="claimed",
+                claimed_by=request.user
+            )
+
+            donation.status = "claim"
+            donation.claimed_at = None
+            donation.claimed_by = None
+            donation.save()
 
 
-@api_view(["GET"])
-def get_user(request):
-    user = request.user
-    if user.is_authenticated:
-        return Response({"email": user.email, "name": user.username})
-    return Response({"error": "User not authenticated"}, status=401)
+            return Response(
+                {"message":"Donation unclaimed succesfully!"},
+                status=status.HTTP_200_OK
+            )
+        
+        except Donation.DoesNotExist:
+            return Response(
+                {"Error" : "Donation not found or not claimed by you!"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_auth(request):
+
+    return Response({
+        "authenticated": True,
+        "user": {
+            "email": request.user.email,
+            "user_type": request.user.user_type,
+            "username": request.user.username,
+        }
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET', 'PATCH'])
@@ -243,6 +363,7 @@ def change_password_view(request):
     request.user.save()
 
     return Response(
-          {"messaage": "Password updated succesfully"},
+          {"message": "Password updated succesfully"},
             status=status.HTTP_200_OK
     )
+

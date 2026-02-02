@@ -24,8 +24,6 @@ export default function Register() {
     },
   });
 
-  // const { register: formRegister } = useForm();
-
   const [errors, setErrors] = useState({});
 
   const handleSubmit = async (e) => {
@@ -65,6 +63,14 @@ export default function Register() {
 
     if (!formData.address.city.trim()) {
       validationErrors.city = ["City is required"];
+    }
+
+    if (!formData.address.street_address.trim()) {
+      validationErrors.street_address = ["Street address is required"];
+    }
+
+    if (!formData.address.pin_code.trim()) {
+      validationErrors.pin_code = ["Pincode is required"];
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -136,11 +142,10 @@ export default function Register() {
                 name="option"
                 value="restaurant"
                 className="w-5 h-5 text-[#F07167] bg-gray-100 border-gray-300 focus:ring-[#F07167]"
-                checked={selectedOption === "restaurant"}
-                onChange={(e) => {
-                  setSelectedOption(e.target.value);
-                  setformData({ ...formData, user_type: e.target.value });
-                }}
+                checked={formData.user_type === "restaurant"}
+                onChange={(e) =>
+                  setformData({ ...formData, user_type: e.target.value })
+                }
               />
               <span className="text-black">As Restaurant </span>
             </label>
@@ -150,64 +155,68 @@ export default function Register() {
                 name="option"
                 value="ngo"
                 className="w-5 h-5 text-[#F07167] bg-gray-100 border-gray-300 focus:ring-[#F07167]"
-                checked={selectedOption === "ngo"}
-                onChange={(e) => {
-                  setSelectedOption(e.target.value);
-                  setformData({ ...formData, user_type: e.target.value });
-                }}
+                checked={formData.user_type === "ngo"}
+                onChange={(e) =>
+                  setformData({ ...formData, user_type: e.target.value })
+                }
               />
               <span className="text-black">As NGO</span>
             </label>
             <ErrorMessage fieldName="user_type" />
           </div>
 
-          <form
-            action=""
-            className="flex flex-col gap-4"
-            onSubmit={handleSubmit}
-          >
-            <input
-              type="text"
-              placeholder={
-                selectedOption == "restaurant"
-                  ? "Restaurant/Hotel Name"
-                  : "Organization Name"
-              }
-              value={formData.organization_name}
-              onChange={(e) =>
-                setformData({ ...formData, organization_name: e.target.value })
-              }
-              className={`border-2
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col w-full">
+              <input
+                type="text"
+                placeholder={
+                  selectedOption == "restaurant"
+                    ? "Restaurant/Hotel Name"
+                    : "Organization Name"
+                }
+                value={formData.organization_name}
+                onChange={(e) =>
+                  setformData({
+                    ...formData,
+                    organization_name: e.target.value,
+                  })
+                }
+                className={`border-2
               ${
                 errors.organization_name ? "border-red-500" : "border-gray-200"
               } rounded-sm px-4 py-2 w-full  `}
-            />
-            <ErrorMessage fieldName="organization_name" />
+              />
+              <ErrorMessage fieldName="organization_name" />
+            </div>
             <div className="flex gap-4">
-              <input
-                type="text"
-                placeholder="Contact person"
-                value={formData.contact_person}
-                onChange={(e) =>
-                  setformData({ ...formData, contact_person: e.target.value })
-                }
-                className={`border-2 ${
-                  errors.contact_person ? "border-red-500" : "border-gray-200"
-                } rounded-sm px-4 py-2 w-full`}
-              />
-              <ErrorMessage fieldName="contact_person" />
-              <input
-                type="email"
-                placeholder="Email address"
-                value={formData.email}
-                onChange={(e) =>
-                  setformData({ ...formData, email: e.target.value })
-                }
-                className={`border-2 ${
-                  errors.email ? "border-red-500" : "border-gray-200"
-                } rounded-sm px-4 py-2 w-full`}
-              />
-              <ErrorMessage fieldName="email" />
+              <div className="flex flex-col w-full">
+                <input
+                  type="text"
+                  placeholder="Contact person"
+                  value={formData.contact_person}
+                  onChange={(e) =>
+                    setformData({ ...formData, contact_person: e.target.value })
+                  }
+                  className={`border-2 ${
+                    errors.contact_person ? "border-red-500" : "border-gray-200"
+                  } rounded-sm px-4 py-2 w-full`}
+                />
+                <ErrorMessage fieldName="contact_person" />
+              </div>
+              <div className="flex flex-col w-full">
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setformData({ ...formData, email: e.target.value })
+                  }
+                  className={`border-2 ${
+                    errors.email ? "border-red-500" : "border-gray-200"
+                  } rounded-sm px-4 py-2 w-full`}
+                />
+                <ErrorMessage fieldName="email" />
+              </div>
             </div>
 
             <div className="bg-gray-50 flex flex-col p-4 gap-4 rounded-md mt-2 ">
@@ -216,92 +225,104 @@ export default function Register() {
                 <TfiLocationPin className="h-5 w-5" />
                 <p>Address Details</p>
               </div>
-
-              <input
-                type="text"
-                placeholder="Street address"
-                value={formData.address.street_address}
-                onChange={(e) =>
-                  setformData({
-                    ...formData,
-                    address: {
-                      ...formData.address,
-                      street_address: e.target.value,
-                    },
-                  })
-                }
-                className={`border-2 ${
-                  errors.street_address ? "border-red-500" : "border-gray-200"
-                } rounded-sm px-4 py-2 w-full`}
-              />
-              <ErrorMessage fieldName="street_address" />
-
+              <div className="flex flex-col w-full">
+                <input
+                  type="text"
+                  placeholder="Street address"
+                  value={formData.address.street_address}
+                  onChange={(e) =>
+                    setformData({
+                      ...formData,
+                      address: {
+                        ...formData.address,
+                        street_address: e.target.value,
+                      },
+                    })
+                  }
+                  className={`border-2 ${
+                    errors.street_address ? "border-red-500" : "border-gray-200"
+                  } rounded-sm px-4 py-2 w-full`}
+                />
+                <ErrorMessage fieldName="street_address" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Area/Locality"
-                  value={formData.address.area}
-                  onChange={(e) =>
-                    setformData({
-                      ...formData,
-                      address: { ...formData.address, area: e.target.value },
-                    })
-                  }
-                  className={`border-2 ${
-                    errors.area ? "border-red-500" : "border-gray-200"
-                  } rounded-sm px-4 py-2 w-full`}
-                />
-                <ErrorMessage fieldName="area" />
-                <input
-                  type="text"
-                  placeholder="Landmark"
-                  value={formData.address.landmark}
-                  onChange={(e) =>
-                    setformData({
-                      ...formData,
-                      address: {
-                        ...formData.address,
-                        landmark: e.target.value,
-                      },
-                    })
-                  }
-                  className=" rounded-sm px-4 py-2 lg:w-96 "
-                />
-                <input
-                  type="text"
-                  placeholder="City"
-                  value={formData.address.city}
-                  onChange={(e) =>
-                    setformData({
-                      ...formData,
-                      address: { ...formData.address, city: e.target.value },
-                    })
-                  }
-                  className={`border-2 ${
-                    errors.city ? "border-red-500" : "border-gray-200"
-                  } rounded-sm px-4 py-2 w-full`}
-                />
-                <ErrorMessage fieldName="city" />
-                <input
-                  type="text"
-                  placeholder="PIN code"
-                  value={formData.address.pin_code}
-                  onChange={(e) =>
-                    setformData({
-                      ...formData,
-                      address: {
-                        ...formData.address,
-                        pin_code: e.target.value,
-                      },
-                    })
-                  }
-                  className=" rounded-sm px-4 py-2 lg:w-96 "
-                />
+                <div className="flex flex-col w-full">
+                  <input
+                    type="text"
+                    placeholder="Area/Locality"
+                    value={formData.address.area}
+                    onChange={(e) =>
+                      setformData({
+                        ...formData,
+                        address: { ...formData.address, area: e.target.value },
+                      })
+                    }
+                    className={`border-2 ${
+                      errors.area ? "border-red-500" : "border-gray-200"
+                    } rounded-sm px-4 py-2 w-full`}
+                  />
+                  <ErrorMessage fieldName="area" />
+                </div>
+                <div className="flex flex-col w-full">
+                  <input
+                    type="text"
+                    placeholder="Landmark"
+                    value={formData.address.landmark}
+                    onChange={(e) =>
+                      setformData({
+                        ...formData,
+                        address: {
+                          ...formData.address,
+                          landmark: e.target.value,
+                        },
+                      })
+                    }
+                    className="border-2 border-gray-200 rounded-sm px-4 py-2 w-full"
+                  />
+                </div>
+                <div className="flex flex-col w-full">
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={formData.address.city}
+                    onChange={(e) =>
+                      setformData({
+                        ...formData,
+                        address: { ...formData.address, city: e.target.value },
+                      })
+                    }
+                    className={`border-2 ${
+                      errors.city ? "border-red-500" : "border-gray-200"
+                    } rounded-sm px-4 py-2 w-full`}
+                  />
+                  <ErrorMessage fieldName="city" />
+                </div>
+                <div className="flex flex-col w-full">
+                  <input
+                    type="text"
+                    placeholder="PIN code"
+                    value={formData.address.pin_code}
+                    onChange={(e) =>
+                      setformData({
+                        ...formData,
+                        address: {
+                          ...formData.address,
+                          pin_code: e.target.value,
+                        },
+                      })
+                    }
+                    className={`border-2 ${
+                      errors.pin_code ? "border-red-500" : "border-gray-200"
+                    } rounded-sm px-4 py-2 lg:w-96  `}
+                  />
+                  <ErrorMessage fieldName="pin_code" />
+                </div>
               </div>
             </div>
             <input
               type="password"
               placeholder="Password"
+              autoComplete="off"
               value={formData.password}
               onChange={(e) =>
                 setformData({ ...formData, password: e.target.value })
@@ -314,6 +335,7 @@ export default function Register() {
             <input
               type="password"
               placeholder="Confirm password"
+              autoComplete="off"
               value={formData.confirm_password}
               onChange={(e) =>
                 setformData({ ...formData, confirm_password: e.target.value })
@@ -324,6 +346,7 @@ export default function Register() {
             />
             <ErrorMessage fieldName="confirm_password" />
             <button
+              type="submit"
               className="px-6 py-3 bg-black text-white transition-all duration-300 relative group overflow-hidden"
               disabled={loading}
             >

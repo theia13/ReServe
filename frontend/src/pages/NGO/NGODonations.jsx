@@ -10,7 +10,9 @@ export default function NGODonations({
   donations = [],
   loading = false,
   onClaim,
+  onUnclaim,
   claimingId = null,
+  unclaimingId = null,
   pastDonations = [],
 }) {
   const { availableDonations, claimedDonations } = useMemo(() => {
@@ -61,7 +63,14 @@ export default function NGODonations({
     );
   };
 
-  const DonationCard = ({ donation, active = true, onClaim, claimingId }) => {
+  const DonationCard = ({
+    donation,
+    active = true,
+    onClaim,
+    onUnclaim,
+    claimingId,
+    unclaimingId,
+  }) => {
     // Capitalize each word in the food item
     const capitalizeWords = (str) =>
       str
@@ -77,6 +86,11 @@ export default function NGODonations({
       : donation.claimed_at
       ? timePast(donation.claimed_at)
       : timePast(donation.expiration_date, donation.expiration_time);
+
+    // Check if this donation is currently being processed
+    const isProcessing =
+      claimingId === donation.id || unclaimingId === donation.id;
+    const isClaimed = donation.status?.toLowerCase() === "claimed";
 
     return (
       <div
@@ -116,13 +130,23 @@ export default function NGODonations({
                 <span>{displayTime}</span>
               </div>
               <div className="p-4">
-                <button
-                  onClick={() => onClaim && onClaim(donation.id)}
-                  className="bg-[#f07167] text-white rounded-md px-4 py-1 text-sm hover:bg-[#e1665d]"
-                  disabled={claimingId === donation.id}
-                >
-                  {claimingId === donation.id ? "Processing..." : "Claim"}
-                </button>
+                {!isClaimed ? (
+                  <button
+                    onClick={() => onClaim && onClaim(donation.id)}
+                    className="bg-[#f07167] text-white rounded-md px-4 py-1 text-sm hover:bg-[#e1665d] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isProcessing}
+                  >
+                    {claimingId === donation.id ? "Claiming..." : "Claim"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onUnclaim && onUnclaim(donation.id)}
+                    className="bg-green-500 text-white rounded-md px-4 py-1 text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isProcessing}
+                  >
+                    {unclaimingId === donation.id ? "Unclaiming..." : "Claimed"}
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -131,9 +155,13 @@ export default function NGODonations({
                 {displayTime}
               </div>
               <div className="p-4">
-                <div className="bg-[#dcdee1] rounded-md px-4 py-1 text-sm text-gray-500">
-                  Claimed
-                </div>
+                <button
+                  onClick={() => onUnclaim && onUnclaim(donation.id)}
+                  className="bg-gray-300 hover:bg-gray-400 rounded-md px-4 py-1 text-sm text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isProcessing}
+                >
+                  {unclaimingId === donation.id ? "Unclaiming..." : "Unclaim"}
+                </button>
               </div>
             </div>
           )}
@@ -154,8 +182,7 @@ export default function NGODonations({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
           {loading ? (
-            <p className="text-center text-gray-500 py-10">
-              {" "}
+            <p className="text-center text-gray-500 py-10 col-span-full">
               Loading donations...
             </p>
           ) : availableDonations.length > 0 ? (
@@ -165,11 +192,15 @@ export default function NGODonations({
                 donation={donation}
                 active={true}
                 onClaim={onClaim}
+                onUnclaim={onUnclaim}
                 claimingId={claimingId}
+                unclaimingId={unclaimingId}
               />
             ))
           ) : (
-            <p className="text-gray-500"> No active donations found.</p>
+            <p className="text-gray-500 col-span-full">
+              No active donations found.
+            </p>
           )}
         </div>
       </div>
@@ -184,8 +215,7 @@ export default function NGODonations({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
           {loading ? (
-            <p className="text-center text-gray-500 py-10">
-              {" "}
+            <p className="text-center text-gray-500 py-10 col-span-full">
               Loading past donations...
             </p>
           ) : claimedDonations.length > 0 ? (
@@ -194,10 +224,14 @@ export default function NGODonations({
                 key={donation.id}
                 donation={donation}
                 active={false}
+                onUnclaim={onUnclaim}
+                unclaimingId={unclaimingId}
               />
             ))
           ) : (
-            <p className="text-gray-500"> No claimed donations found.</p>
+            <p className="text-gray-500 col-span-full">
+              No claimed donations found.
+            </p>
           )}
         </div>
       </div>

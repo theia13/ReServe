@@ -9,9 +9,13 @@ import TimePicker from "../../components/ui/timepicker";
 import { CiCalendar } from "react-icons/ci";
 import { Calendar } from "../../components/ui/calendar";
 import { useToast } from "../../hooks/use-toast";
+import { useDonations } from "../../hooks/useDonations";
 import { AuthContext } from "../../context/AuthContext";
 import { format } from "date-fns";
-import { convertTo24HourFormat } from "../../utils/dateTimeUtils";
+import {
+  convertTo24HourFormat,
+  convertTo12HourFormat,
+} from "../../utils/dateTimeUtils";
 import {
   Form,
   FormControl,
@@ -86,21 +90,27 @@ const formSchema = z
     }
   });
 
-export default function NewDonationForm({ onSuccess }) {
-  const { token } = useContext(AuthContext);
+export default function NewDonationForm({ onSuccess, editData }) {
+  // const { token } = useContext(AuthContext);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+
+  const { createDonation, deleteDonation, updateDonation, loading } =
+    useDonations();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      quantity: "",
-      description: "",
-      measurementUnit: "liters",
-      expirationDate: null,
-      expirationTime: "",
+      title: editData?.food_item || "",
+      quantity: editData?.quantity?.toString() || "",
+      description: editData?.description || "",
+      measurementUnit: editData?.units || "liters",
+      expirationDate: editData?.expiration_date
+        ? new Date(editData.expiration_date)
+        : null,
+      expirationTime: editData?.expiration_time
+        ? convertTo12HourFormat(editData.expiration_time)
+        : "",
     },
     mode: "all",
   });
@@ -123,8 +133,6 @@ export default function NewDonationForm({ onSuccess }) {
       return;
     }
 
-    setLoading(true);
-
     const formattedData = {
       food_item: data.title,
       quantity: Number(data.quantity),
@@ -134,43 +142,54 @@ export default function NewDonationForm({ onSuccess }) {
       units: data.measurementUnit,
     };
 
-    console.log("Submitting donation:", formattedData);
-
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/donations/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem(ACCESS_TOKEN)}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formattedData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Server error response:", errorData);
-        throw new Error(errorData.detail || "Failed to add donation");
+      if (editData) {
+        await updateDonation(editData.id, formattedData);
+        toast({
+          title: "Donation updated!",
+          description: "Your donation has been successfully updated.",
+        });
+      } else {
+        await createDonation(formattedData);
+        toast({
+          title: "Donation added",
+          description: "Your donation has been successfully added.",
+        });
       }
-
-      const responseData = await response.json();
-      console.log("Donation created:", responseData);
-
-      toast({
-        title: "Donation added!",
-        description: "Your donation has been successfully added.",
-      });
-
       form.reset();
       onSuccess?.();
     } catch (error) {
-      console.error("Error creating donation:", error);
+      console.error("Error with donation :", error);
       toast({
+        variant: "destructive",
         title: "Error",
-        description: "Failed to add donation. Try again.",
+        description: editData
+          ? "Failed to update donation. Try again"
+          : "Failed to add donation. Try again.",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this donation?",
+    );
+    if (!confirmed) return;
+    try {
+      await deleteDonation(editData.id);
+
+      toast({
+        title: "Donation deleted",
+        description: "The donation has been removed.",
+      });
+
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Try again later",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -326,13 +345,35 @@ export default function NewDonationForm({ onSuccess }) {
           />
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onSuccess?.()}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Adding..." : "Add Donation"}
-          </Button>
+        <div className="flex justify-between flex-wrap gap-2">
+          {editData && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              Delete
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onSuccess?.()}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading
+                ? editData
+                  ? "Updating..."
+                  : "Adding..."
+                : editData
+                  ? "Update"
+                  : "Add Donation"}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

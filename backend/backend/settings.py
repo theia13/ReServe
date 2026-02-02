@@ -27,15 +27,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c_^2cg%57#g$&tci_=ia47s+yt(!e!(j$m#4xnh63mqfce=b8@'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+# SUGGESTIONS
+
+# These are fine for local development, but before deploying:
+# DEBUG = os.getenv("DEBUG", "True") == "True"
+# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+
+# Then in .env:
+# DEBUG=False
+# ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.authentication.CookieJWTAuthentication',  
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -45,6 +56,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',  
     ]
 }
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -84,13 +96,47 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS =[
     'content-type',
     'authorization',
     'x-requested-with',
 ]
+CORS_EXPOSE_HEADERS = ['Authorization']
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = False     # Set to True in production with HTTPS
+
+# For development only - allows cookies over HTTP
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+
+# SUGGESTIONS
+
+# CORS_ALLOW_ALL_ORIGINS = True
+# This is fine for dev, but it's too permissive for prod.
+
+# ✅ Safer version:
+
+# python
+# Copy
+# Edit
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "https://yourfrontend.com",
+# ]
+
 
 
 ROOT_URLCONF = 'backend.urls'
@@ -173,3 +219,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'api.CustomUser'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+}

@@ -8,21 +8,22 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Button } from "../../components/ui/button";
-import { ACCESS_TOKEN } from "../../constants/";
+import { useUserProfile } from "../../hooks/useUserProfile"; // Import the hook
 
 export default function NGOSettings() {
-  const [loading, setLoading] = useState(false);
-  const [userData, setUserData] = useState({
-    organization_name: "",
-    email: "",
-    address: {
-      street_address: "",
-      area: "",
-      landmark: "",
-      city: "",
-      pin_code: "",
-    },
-  });
+  // Use the user profile hook
+  const {
+    userData,
+    setUserData,
+    loading,
+    errors,
+    success,
+    setErrors,
+    setSuccess,
+    fetchUserProfile,
+    updateUserProfile,
+    changePassword,
+  } = useUserProfile();
 
   const [passwordData, setPasswordData] = useState({
     current_password: "",
@@ -33,45 +34,10 @@ export default function NGOSettings() {
   const [pwSuccess, setPwSuccess] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
 
-  const [errors, setErrors] = useState({});
-  const [success, setSuccess] = useState(false);
-
   // Fetch user data on mount
   useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      const accessToken = sessionStorage.getItem(ACCESS_TOKEN);
-      try {
-        const res = await fetch(
-          "http://127.0.0.1:8000/api/user/user-profile/",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (!res.ok) throw new Error("Could not fetch user data");
-        const data = await res.json();
-        setUserData({
-          ...data,
-          address: {
-            street_address: data.address?.street_address || "",
-            area: data.address?.area || "",
-            landmark: data.address?.landmark || "",
-            city: data.address?.city || "",
-            pin_code: data.address?.pin_code || "",
-          },
-        });
-      } catch (error) {
-        setErrors({ non_field_errors: ["Failed to load user data"] });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserData();
-  }, []);
+    fetchUserProfile().catch(console.error);
+  }, [fetchUserProfile]);
 
   // Handle input change for both user and address fields
   const handleInputChange = (e) => {
@@ -94,35 +60,51 @@ export default function NGOSettings() {
     setPasswordData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submit
+  // Handle profile form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setErrors({});
-    setSuccess(false);
-
-    // Optional: Add validation here
-
-    const accessToken = sessionStorage.getItem(ACCESS_TOKEN);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/user/user-profile/", {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        setErrors(errData);
-      } else {
-        setSuccess(true);
-      }
+      await updateUserProfile(userData);
     } catch (error) {
-      setErrors({ non_field_errors: ["Failed to update profile"] });
+      console.error("Error updating profile:", error);
+    }
+  };
+
+  // Handle password change submit
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPwLoading(true);
+    setPwError("");
+    setPwSuccess(false);
+
+    // Basic frontend validation
+    if (
+      !passwordData.current_password ||
+      !passwordData.new_password ||
+      !passwordData.confirm_new_password
+    ) {
+      setPwError("All fields are required.");
+      setPwLoading(false);
+      return;
+    }
+    if (passwordData.new_password !== passwordData.confirm_new_password) {
+      setPwError("New passwords do not match.");
+      setPwLoading(false);
+      return;
+    }
+
+    try {
+      await changePassword(passwordData);
+      setPwSuccess(true);
+      setPasswordData({
+        current_password: "",
+        new_password: "",
+        confirm_new_password: "",
+      });
+    } catch (error) {
+      setPwError(error.message);
     } finally {
-      setLoading(false);
+      setPwLoading(false);
     }
   };
 
@@ -329,65 +311,7 @@ export default function NGOSettings() {
             </TabsContent>
 
             <TabsContent value="security" className="animate-slide-up">
-              <form
-                className="space-y-6"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setPwLoading(true);
-                  setPwError("");
-                  setPwSuccess(false);
-
-                  // Optional: Basic frontend validation
-                  if (
-                    !passwordData.current_password ||
-                    !passwordData.new_password ||
-                    !passwordData.confirm_new_password
-                  ) {
-                    setPwError("All fields are required.");
-                    setPwLoading(false);
-                    return;
-                  }
-                  if (
-                    passwordData.new_password !==
-                    passwordData.confirm_new_password
-                  ) {
-                    setPwError("New passwords do not match.");
-                    setPwLoading(false);
-                    return;
-                  }
-
-                  try {
-                    const res = await fetch(
-                      "http://127.0.0.1:8000/api/user/change-password",
-                      {
-                        method: "PATCH",
-                        headers: {
-                          Authorization: `Bearer ${sessionStorage.getItem(
-                            ACCESS_TOKEN
-                          )}`,
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(passwordData),
-                      }
-                    );
-                    const data = await res.json();
-                    if (!res.ok) {
-                      setPwError(data.error || "Failed to change password.");
-                    } else {
-                      setPwSuccess(true);
-                      setPasswordData({
-                        current_password: "",
-                        new_password: "",
-                        confirm_new_password: "",
-                      });
-                    }
-                  } catch (err) {
-                    setPwError("Network error. Try again.");
-                  } finally {
-                    setPwLoading(false);
-                  }
-                }}
-              >
+              <form className="space-y-6" onSubmit={handlePasswordSubmit}>
                 {pwError && <div className="text-red-500">{pwError}</div>}
                 {pwSuccess && (
                   <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">

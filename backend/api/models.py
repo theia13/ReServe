@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 from django.utils.timezone import now, timedelta
+from django.core.validators import RegexValidator
+
 import datetime
 
 from django.db.models.signals import post_save
@@ -28,7 +30,7 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, email, password=True, **extra_fields):
+    def create_superuser(self, email, password, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -50,7 +52,7 @@ class CustomUser(AbstractUser, PermissionsMixin):
 
     first_name = models.CharField(max_length=150, null=True, blank=True)
     last_name = models.CharField(max_length=150, null=True, blank=True)
-    last_login = models.CharField(max_length=150, null=True, blank=True)
+    last_login = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(max_length=150, null=True, blank=True)
 
     objects = CustomUserManager()
@@ -68,7 +70,10 @@ class UserAddress(models.Model):
     area = models.CharField(max_length=255, null=False, blank=True)
     landmark = models.CharField(max_length=255, null=False, blank=True)
     city = models.CharField(max_length=255, null=False, blank=True)
-    pin_code = models.CharField(max_length=255, null=False, blank=True)
+    pin_code = models.CharField(
+        max_length=6, 
+        validators=[RegexValidator(regex=r'^\d{6}$', message='Enter a valid 6-digit PIN')]
+)
 
     def __str__(self):
         return f"{self.street_address} , {self.area} {self.city}"
@@ -77,9 +82,6 @@ class UserAddress(models.Model):
 class DonationManager(models.Manager):
     def active(self):
         return self.filter(status="claim")
-    
-    def by_active(self, restaurant):
-        return self.filter(restaurant="restaurant")
     
     def recent(self ):
         return self.filter(created_at__gte=now() - timedelta(days=7))
@@ -96,8 +98,8 @@ class Donation(models.Model):
     UNIT_CHOICES = [
         ("liters", "Liters"),
         ("kilograms", "Kilograms"), 
-        ("servings", "servings"), 
-        ("pieces", "pieces"), 
+        ("servings", "Servings"), 
+        ("pieces", "Pieces"), 
     ]
     claimed_by = models.ForeignKey("CustomUser", null=True, blank=True, on_delete=models.SET_NULL, related_name='claimed_donations') 
     claimed_at = models.DateTimeField(null=True, blank=True)

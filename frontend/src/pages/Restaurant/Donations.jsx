@@ -3,16 +3,21 @@ import { LuClock7 } from "react-icons/lu";
 import { LuPencilLine } from "react-icons/lu";
 import { FaArrowRightLong } from "react-icons/fa6";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   formatDateTime,
   timeLeft,
   timePast,
   isExpired,
+  timeExpired,
 } from "../../utils/dateTimeUtils";
 
-export default function Donations({ donations = [], loading = false }) {
+export default function Donations({
+  donations = [],
+  loading = false,
+  onEditClick,
+}) {
   const { activeDonations, pastDonations } = useMemo(() => {
     const active = [];
     const past = [];
@@ -66,7 +71,7 @@ export default function Donations({ donations = [], loading = false }) {
     </div>
   );
 
-  const DonationCard = ({ donation, active = true }) => {
+  const DonationCard = ({ donation, active = true, onEditClick }) => {
     const capitalizeWords = (str) =>
       str
         .split(" ")
@@ -77,8 +82,7 @@ export default function Donations({ donations = [], loading = false }) {
       ? timeLeft(donation.expiration_date, donation.expiration_time)
       : donation.claimed_at
       ? timePast(donation.claimed_at)
-      : timePast(donation.expiration_date, donation.expiration_time);
-
+      : timeExpired(donation.expiration_date, donation.expiration_time); // This will show how long ago it expired
     return (
       <div
         className={`bg-white rounded-lg shadow-md overflow-hidden transition-all card-hover animate-slide-up ${
@@ -92,7 +96,10 @@ export default function Donations({ donations = [], loading = false }) {
         >
           <h3 className="font-medium">{capitalizeWords(donation.food_item)}</h3>
           {active && (
-            <button className="p-2 rounded-full hover:bg-[#c35b53] transition-colors">
+            <button
+              onClick={() => onEditClick(donation)}
+              className="p-2 rounded-full hover:bg-[#c35b53] transition-colors"
+            >
               <LuPencilLine size={16} />
             </button>
           )}
@@ -152,6 +159,7 @@ export default function Donations({ donations = [], loading = false }) {
                 key={donation.id}
                 donation={donation}
                 active={true}
+                onEditClick={onEditClick}
               />
             ))
           ) : (
@@ -164,7 +172,7 @@ export default function Donations({ donations = [], loading = false }) {
         <SectionHeader
           title="Past Donations"
           subtitle="Check donation history"
-          viewAllLink="/history"
+          viewAllLink="/restaurant-dashboard/history"
           active={false}
         />
 

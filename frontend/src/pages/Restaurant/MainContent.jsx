@@ -9,57 +9,37 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../../components/ui/dialog.jsx";
-import { ACCESS_TOKEN } from "../../constants/";
+import { useDonations } from "../../hooks/useDonations";
 import { AuthContext } from "../../context/AuthContext";
 import Donations from "./Donations";
 import NewDonationForm from "./NewDonationForm";
 
 export default function MainContent() {
   const { user } = useContext(AuthContext);
-  const [donations, setDonations] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { donations, loading, error, fetchDonations } = useDonations();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const fetchDonations = async () => {
-    try {
-      setLoading(true);
-      const accessToken = sessionStorage.getItem(ACCESS_TOKEN);
-      if (!accessToken) throw new Error("Access token not found");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState(null);
 
-      const response = await fetch("http://127.0.0.1:8000/api/donations/", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch donations");
-
-      const data = await response.json();
-      console.log("Fetched donations:", data);
-      setDonations(data);
-    } catch (err) {
-      console.error("Error fetching donations:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleEditClick = (donation) => {
+    setEditData(donation);
+    setIsEditing(true);
   };
 
+  const handleEditSuccess = () => {
+    setIsEditing(false);
+    setEditData(null);
+    fetchDonations();
+  };
   useEffect(() => {
     fetchDonations();
-
-    const fetchInterval = setInterval(() => {
-      fetchDonations();
-    }, 60000);
-
-    return () => {
-      clearInterval(fetchInterval);
-    };
-  }, []);
+    const interval = setInterval(fetchDonations, 60000);
+    return () => clearInterval(interval);
+  }, [fetchDonations]);
 
   const handleDonationSuccess = () => {
-    fetchDonations(); // Refresh donations list
+    fetchDonations();
     setIsDialogOpen(false);
   };
 
@@ -92,10 +72,25 @@ export default function MainContent() {
               <DialogHeader>
                 <DialogTitle>Add New Donation</DialogTitle>
                 <DialogDescription>
-                  Fill in the details below to add your donation.
+                  Create a new food donation listing.
                 </DialogDescription>
               </DialogHeader>
               <NewDonationForm onSuccess={handleDonationSuccess} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Donation</DialogTitle>
+                <DialogDescription>
+                  Make changes to your donation details.
+                </DialogDescription>
+              </DialogHeader>
+              <NewDonationForm
+                editData={editData}
+                onSuccess={handleEditSuccess}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -104,9 +99,12 @@ export default function MainContent() {
         <Stats donations={donations} />
       </div>
       <div className="px-12 py-4">
-        <Donations donations={donations} loading={loading} />
+        <Donations
+          donations={donations}
+          loading={loading}
+          onEditClick={handleEditClick}
+        />
       </div>
-      NGOHistory
     </div>
   );
 }
